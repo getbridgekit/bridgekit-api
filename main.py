@@ -1,21 +1,10 @@
 import os
-from fastapi import FastAPI, HTTPException, Security, Depends
-from fastapi.security.api_key import APIKeyHeader
+from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 from bridgekit import evaluate, plan, ask
 
 # Create the app
 app = FastAPI()
-
-# API key auth
-API_KEY_NAME = "X-API-Key"
-api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
-
-def require_api_key(key: str = Security(api_key_header)):
-    expected = os.environ.get("BRIDGEKIT_API_KEY")
-    if not expected or key != expected:
-        raise HTTPException(status_code=401, detail="Invalid or missing API key")
-    return key
 
 
 @app.get("/")
@@ -30,7 +19,8 @@ class EvaluateRequest(BaseModel):
 
 # Create an endpoint
 @app.post("/evaluate")
-def evaluate_writeup(request: EvaluateRequest, key: str = Depends(require_api_key)):
+def evaluate_writeup(request: EvaluateRequest, x_anthropic_api_key: str = Header(...)):
+    os.environ["ANTHROPIC_API_KEY"] = x_anthropic_api_key
     try:
         result = evaluate(request.text)
         return {"result": result}
@@ -47,7 +37,8 @@ class PlanRequest(BaseModel):
 
 #Create endpoint for plan()
 @app.post("/plan")
-def plan_analysis(request: PlanRequest, key: str = Depends(require_api_key)):
+def plan_analysis(request: PlanRequest, x_anthropic_api_key: str = Header(...)):
+    os.environ["ANTHROPIC_API_KEY"] = x_anthropic_api_key
     try:
         result = plan(
             question=request.question,
@@ -68,7 +59,8 @@ class AskRequest(BaseModel):
 
 # Create endpoint for ask()
 @app.post("/ask")
-def ask_question(request: AskRequest, key: str = Depends(require_api_key)):
+def ask_question(request: AskRequest, x_anthropic_api_key: str = Header(...)):
+    os.environ["ANTHROPIC_API_KEY"] = x_anthropic_api_key
     try:
         result = ask(
             question=request.question,
